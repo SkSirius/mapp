@@ -1,0 +1,21 @@
+{
+    "api" : {
+        "port" : 8081
+    },
+    "urls" : {},
+
+    "logging" : {
+        "level" : "debug"
+    },
+
+    "mongodb" : {
+        "url": "mongodb://localhost:27017/mapp",
+        "options" : {
+            "w":"majority",
+            "wtimeout": 10000,
+            "serializeFunctions": true,
+            "forceServerObjectId": true,
+            "useMongoClient": true
+        }
+    }
+}

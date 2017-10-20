@@ -7,6 +7,8 @@
 var app = require('../app');
 var debug = require('debug')('backend:server');
 var http = require('http');
+var db = require('../lib/database');
+var logger = require('../lib/logger');
 
 /**
  * Get port from environment and store in Express.
@@ -25,9 +27,16 @@ var server = http.createServer(app);
  * Listen on provided port, on all network interfaces.
  */
 
-server.listen(port);
-server.on('error', onError);
-server.on('listening', onListening);
+
+db.init(function(err) {
+  if (err) {
+    logger.error('Unable to connect to database', err);
+  } else {
+    server.listen(port);
+    server.on('error', onError);
+    server.on('listening', onListening);
+  }
+});
 
 /**
  * Normalize a port into a number, string, or false.
@@ -82,9 +91,10 @@ function onError(error) {
  */
 
 function onListening() {
+  logger.info('Listening on ' + bind);
   var addr = server.address();
   var bind = typeof addr === 'string'
     ? 'pipe ' + addr
     : 'port ' + addr.port;
-  debug('Listening on ' + bind);
+  logger.info('Listening on ' + bind);
 }
