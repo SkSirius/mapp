@@ -1,46 +1,53 @@
-var express = require('express');
-var path = require('path');
-var favicon = require('serve-favicon');
-var logger = require('./lib/logger');
-var cookieParser = require('cookie-parser');
+#!/usr/bin/env node
+
+'use strict';
+
+if (!process.env.NODE_ENV) process.env.NODE_ENV='dev';
+
+var pkg = require('./package.json');
+var conf = require('./lib/config');
+var restify = require('restify');
 var bodyParser = require('body-parser');
+var db = require('./lib/database');
+var logger = require('./lib/logger');
+var plugins = require('restify-plugins');
 
-var index = require('./routes/index');
-var users = require('./routes/users');
-
-var app = express();
-
-// view engine setup
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', 'jade');
-
-// uncomment after placing your favicon in /public
-//app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
-app.use(logger.log);
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(cookieParser());
-app.use(express.static(path.join(__dirname, 'public')));
-
-app.use('/', index);
-app.use('/users', users);
-
-// catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  var err = new Error('Not Found');
-  err.status = 404;
-  next(err);
+var server = restify.createServer({
+    name: pkg.name,
+    version: pkg.version
 });
 
-// error handler
-app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'dev' ? err : {};
+// middleware
+server.use(plugins.acceptParser(server.acceptable));
+server.use(plugins.queryParser());
+server.use(bodyParser.json());
+server.use(bodyParser.urlencoded({ extended: true }));
+server.use(plugins.gzipResponse());
 
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
+// this is to send back CORS headers
+//plugins.CORS.ALLOW_HEADERS.push('authorization');
+//server.use(restify.CORS({
+//    headers: ['x-requested-with', 'accept', 'authorization'],
+//    origins: ['*']
+//}));
+
+require('./lib/routes')(server);
+
+server.get('/sample1', function(req, res, next) {
+  res.send({ aa: "ss"});
+  return next();
 });
 
-module.exports = app;
+server.on('uncaughtException', function (req, res, route, err) {
+    logger.error('Unexpected server Error:' + route, err.stack);
+    res.status(500);
+    res.send({message : 'Unexpected server error'});
+});
+
+process.on('exit', (code) => {
+    console.log('About to exit with code:', code);
+});
+
+logger.info('Starting %s in %s mode',server.name,process.env.NODE_ENV);
+
+module.exports = server;
